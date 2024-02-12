@@ -21,7 +21,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -55,7 +54,7 @@ var (
 	errTokenMissing = errors.New("token must be specified in DIGITALOCEAN_ACCESS_TOKEN environment variable")
 
 	// De-facto global variables that require initialization at runtime.
-	supportedKubernetesVersions     = []string{"1.23", "1.22", "1.21"}
+	supportedKubernetesVersions     = []string{"1.29", "1.28", "1.27", "1.26"}
 	sourceFileDir                   string
 	testdriverDirectoryAbsolutePath string
 	deployScriptPath                string
@@ -257,7 +256,7 @@ func TestE2E(t *testing.T) {
 				// Create temporary directory where the test lives. The operating
 				// system-specific temporary folder would not be bind-mountable into
 				// our e2e container by default on Mac.
-				tmpfile, err := ioutil.TempFile(sourceFileDir, "csi-e2e-kubeconfig-*")
+				tmpfile, err := os.CreateTemp(sourceFileDir, "csi-e2e-kubeconfig-*")
 				if err != nil {
 					t.Fatalf("failed to create temporary file: %s", err)
 				}

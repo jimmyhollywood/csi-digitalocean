@@ -107,6 +107,12 @@ The following table describes the required DigitalOcean CSI driver version per s
 | 1.21               | v3                              |
 | 1.22               | v4                              |
 | 1.23               | v4.2.0+                         |
+| 1.24               | v4.3.0+                         |
+| 1.25               | v4.4.0+                         |
+| 1.26               | v4.5.0+                         |
+| 1.27               | v4.6.0+                         |
+| 1.28               | v4.7.0+                         |
+| 1.29               | v4.8.0+                         |
 
 ---
 **Note:**
@@ -302,6 +308,20 @@ For that reason, the default page size can be customized by passing the `--defau
 2. The configured sidecar timeout values may need to be aligned with the chosen page size. In particular, csi-attacher invokes `ListVolumes` to periodically synchronize the API and cluster-local volume states; as such, its timeout must be large enough to account for the expected number of volumes in the given account and region.   
 3. The default page size does not become effective if an explicit page size (more precisely, _max entries_ in CSI spec speak) is passed to a given gRPC method.
 
+### API rate limiting
+
+DO API usage is subject to [certain rate limits](https://docs.digitalocean.com/reference/api/api-reference/#section/Introduction/Rate-Limit). In order to protect against running out of quota for extremely heavy regular usage or pathological cases (e.g., bugs or API thrashing due to an interfering third-party controller), a custom rate limit can be configured via the `--do-api-rate-limit` flag. It accepts a float value, e.g., `--do-api-rate-limit=3.5` to restrict API usage to 3.5 queries per second.
+
+### Flags
+
+| Name                  | Description                                                                          | Default |
+|-----------------------|--------------------------------------------------------------------------------------|---------|
+| --validate-attachment | Validate if the attachment has fully completed before formatting/mounting the device | false   |
+
+The `--validate-attachment` options adds an additional validation which checks for the `/sys/class/block/<device name>/device/state`
+file content for the `running` status. When enabling this flag, it prevents a racing condition where the DOBS volumes aren't 
+fully attached which can be misinterpreted by the CSI implementation causing a force format of the volume which results in data loss. 
+
 ---
 
 ## Development
@@ -357,7 +377,23 @@ There is a set of custom integration tests which are mostly useful for Kubernete
 
 To run the integration tests on a DOKS cluster, follow [the instructions](test/kubernetes/deploy/README.md).
 
-## Updating the Kubernetes dependencies
+## Prepare CSI driver for a new Kubernetes minor version
+
+1. Review recently merged PRs and any in-progress / planned work to ensure any bugs scheduled for the release have been fixed and merged.
+2. [Bump kubernetes dependency versions](#updating-the-kubernetes-dependencies)
+   1. If needed, update the `deploy/kubernetes/releases/csi-digitalocean-dev` images to their latest stable version.
+3. [Support running e2e on new $MAJOR.$MINOR](test/e2e/README.md#add-support-for-a-new-kubernetes-release)
+   1. Since we only support three minor versions at a time. E2e tests for the oldest supported version can be removed.
+4. Verify [e2e tests pass](.github/workflows/test.yaml) - see [here](#end-to-end-tests) about running tests locally
+5. Prepare for [release](#releasing)
+6. If necessary, update Go version to the latest stable Go Binary 
+   1. Update [Dockerfile](https://github.com/digitalocean/csi-digitalocean/blob/master/test/e2e/Dockerfile#L16)
+   2. Update [go.mod](https://github.com/digitalocean/csi-digitalocean/blob/615b91ab948a08cb04ab43ddb62720d5bfb68c87/go.mod#L3)
+7. Perform [release](.github/workflows/release.yaml)
+
+> See [e2e test README](test/e2e/README.md) on how to run conformance tests locally.
+
+### Updating the Kubernetes dependencies
 
 Run
 
@@ -367,11 +403,13 @@ make NEW_KUBERNETES_VERSION=X.Y.Z update-k8s
 
 to update the Kubernetes dependencies to version X.Y.Z.
 
-## Releasing
+> Note: Make sure to also add support to the e2e tests for the new kubernetes version, following [these instructions](test/e2e/README.md#add-support-for-a-new-kubernetes-release).
+
+### Releasing
 
 Releases may happen either for the latest minor version of the CSI driver maintained in the `master` branch, or an older minor version still maintained in one of the `release-*` branches. In this section, we will call that branch the _release branch_.
 
-To release a new version `vX.Y.Z`, first bump the version:
+To release a new version `vX.Y.Z`, first check out the release branch and bump the version:
 
 ```shell
 make NEW_VERSION=vX.Y.Z bump-version
@@ -392,11 +430,13 @@ After it is merged to the release branch, wait for the release branch build to g
 Finally, check out the release branch again, tag the release, and push it:
 
 ```shell
-git checkout master
+git checkout <release branch>
 git pull
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
+
+(This works for non-master release branches as well since the `checkout` Github Action we use defaults to checking out the ref/SHA that triggered the workflow.)
 
 The CI will publish the container image `digitalocean/do-csi-plugin:vX.Y.Z` and create a Github Release under the name `vX.Y.Z` automatically. Nothing else needs to be done.
 

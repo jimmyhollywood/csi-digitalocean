@@ -1,4 +1,4 @@
-# Copyright 2022 DigitalOcean
+# Copyright 2023 DigitalOcean
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ spec:
       serviceAccountName: snapshot-controller
       containers:
         - name: snapshot-controller
-          image: k8s.gcr.io/sig-storage/snapshot-controller:v6.0.1
+          image: registry.k8s.io/sig-storage/snapshot-controller:v6.3.3
           args:
             - "--v=5"
           imagePullPolicy: IfNotPresent

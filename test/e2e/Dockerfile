@@ -13,60 +13,65 @@
 # limitations under the License.
 
 ### base build containers
-FROM golang:1.13 AS builder
+FROM golang:1.21 AS builder
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends rsync
 RUN mkdir -p /go/src/k8s.io
 WORKDIR /go/src/k8s.io
 
-### Kubernetes 1.23
-FROM builder AS tests-1.23
-ARG KUBE_VERSION_1_23=1.23.7
-ARG KUBE_VERSION_1_23_E2E_BIN_SHA256_CHECKSUM=e1a9a632b7715d4bfbac3322da5d32072eaf544b31a81a6c3df205d0dc0e96b7
+### Kubernetes 1.29
+FROM builder As tests-1.29
+ARG KUBE_VERSION_1_29=1.29.0
+ARG KUBE_VERSION_1_29_E2E_BIN_SHA256_CHECKSUM=b0d19ce356dce19eeb6d36bba99545ca334d0964ac68f1088ec0ee68cfcee530
 
-RUN curl --fail --location https://dl.k8s.io/v${KUBE_VERSION_1_23}/kubernetes-test-linux-amd64.tar.gz | tar xvzf - --strip-components 3 kubernetes/test/bin/e2e.test
-RUN echo "${KUBE_VERSION_1_23_E2E_BIN_SHA256_CHECKSUM}" e2e.test | sha256sum --check
-RUN cp e2e.test /e2e.1.23.test
+RUN curl --fail --location https://dl.k8s.io/v${KUBE_VERSION_1_29}/kubernetes-test-linux-amd64.tar.gz | tar xvzf - --strip-components 3 kubernetes/test/bin/e2e.test kubernetes/test/bin/ginkgo
+RUN echo "${KUBE_VERSION_1_29_E2E_BIN_SHA256_CHECKSUM}" e2e.test | sha256sum --check
+RUN cp e2e.test /e2e.1.29.test
+RUN cp ginkgo /ginkgo-1.29
 
-### Kubernetes 1.22
-FROM builder AS tests-1.22
-ARG KUBE_VERSION_1_22=1.22.5
-ARG KUBE_VERSION_1_22_E2E_BIN_SHA256_CHECKSUM=8665242697896acf544fee3e060ccdacc49ddac68adca083ce4de131c4a7e829
+### Kubernetes 1.28
+FROM builder AS tests-1.28
+ARG KUBE_VERSION_1_28=1.28.0
+ARG KUBE_VERSION_1_28_E2E_BIN_SHA256_CHECKSUM=807f5ce07395f01e916873847a553dc32d437341695360bbcad5932e9fed094e
 
-RUN curl --fail --location https://dl.k8s.io/v${KUBE_VERSION_1_22}/kubernetes-test-linux-amd64.tar.gz | tar xvzf - --strip-components 3 kubernetes/test/bin/e2e.test
-RUN echo "${KUBE_VERSION_1_22_E2E_BIN_SHA256_CHECKSUM}" e2e.test | sha256sum --check
-RUN cp e2e.test /e2e.1.22.test
+RUN curl --fail --location https://dl.k8s.io/v${KUBE_VERSION_1_28}/kubernetes-test-linux-amd64.tar.gz | tar xvzf - --strip-components 3 kubernetes/test/bin/e2e.test kubernetes/test/bin/ginkgo
+RUN echo "${KUBE_VERSION_1_28_E2E_BIN_SHA256_CHECKSUM}" e2e.test | sha256sum --check
+RUN cp e2e.test /e2e.1.28.test
+RUN cp ginkgo /ginkgo-1.28
 
-### Kubernetes 1.21
-FROM builder AS tests-1.21
-ARG KUBE_VERSION_1_21=1.21.6
-ARG KUBE_VERSION_1_21_E2E_BIN_SHA256_CHECKSUM=74db305a069c82a7cf874c483a1d4ef163ae061bb259cdaea3047066b21c2a6c
+### Kubernetes 1.27
+FROM builder AS tests-1.27
+ARG KUBE_VERSION_1_27=1.27.1
+ARG KUBE_VERSION_1_27_E2E_BIN_SHA256_CHECKSUM=2728572bd1b650efb09f5383c59b25d0458b79ebe813678f34898eb3f50d71bf
 
-RUN curl --fail --location https://dl.k8s.io/v${KUBE_VERSION_1_21}/kubernetes-test-linux-amd64.tar.gz | tar xvzf - --strip-components 3 kubernetes/test/bin/e2e.test
-RUN echo "${KUBE_VERSION_1_21_E2E_BIN_SHA256_CHECKSUM}" e2e.test | sha256sum --check
-RUN cp e2e.test /e2e.1.21.test
+RUN curl --fail --location https://dl.k8s.io/v${KUBE_VERSION_1_27}/kubernetes-test-linux-amd64.tar.gz | tar xvzf - --strip-components 3 kubernetes/test/bin/e2e.test kubernetes/test/bin/ginkgo
+RUN echo "${KUBE_VERSION_1_27_E2E_BIN_SHA256_CHECKSUM}" e2e.test | sha256sum --check
+RUN cp e2e.test /e2e.1.27.test
+RUN cp ginkgo /ginkgo-1.27
 
-### ginkgo and tools
-FROM golang:1.13 AS tools
+### Kubernetes 1.26
+FROM builder AS tests-1.26
+ARG KUBE_VERSION_1_26=1.26.0
+ARG KUBE_VERSION_1_26_E2E_BIN_SHA256_CHECKSUM=6d337b8bd7789105e95682ff1ad7da8d3e8c6c40e8d85021ef72d4ae117f08a9
+
+RUN curl --fail --location https://dl.k8s.io/v${KUBE_VERSION_1_26}/kubernetes-test-linux-amd64.tar.gz | tar xvzf - --strip-components 3 kubernetes/test/bin/e2e.test kubernetes/test/bin/ginkgo
+RUN echo "${KUBE_VERSION_1_26_E2E_BIN_SHA256_CHECKSUM}" e2e.test | sha256sum --check
+RUN cp e2e.test /e2e.1.26.test
+RUN cp ginkgo /ginkgo-1.26
+
+FROM golang:1.21 AS tools
 # See comment at the bottom on why we need tini.
-ARG TINI_VERSION=0.18.0
+ARG TINI_VERSION=0.19.0
 # doctl is needed to support clusters that had their kubeconfig fetched via the
 # CLI because those leverage a kubeconfig authentication plugin based on doctl.
-ARG DOCTL_VERSION=1.76.2
-# ginkgo is needed to run the upstream end-to-end tests.
-ARG GINKGO_VERSION=1.10.3
-# kubectl is needed by some tests.
-ARG KUBECTL_VERSION=1.23.7
+ARG DOCTL_VERSION=1.102.0
 
 RUN curl --fail --location --output /tini https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini
 RUN chmod u+x /tini
 
 RUN curl --fail --location https://github.com/digitalocean/doctl/releases/download/v${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-amd64.tar.gz | tar -xzv
 RUN cp doctl /
-
-RUN GO111MODULE=on go get github.com/onsi/ginkgo/ginkgo@v${GINKGO_VERSION}
-RUN cp bin/ginkgo /
 
 RUN curl --fail --location --remote-name https://storage.googleapis.com/kubernetes-release/release/$(curl --fail --silent https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
 RUN chmod u+x kubectl
@@ -77,12 +82,16 @@ FROM bitnami/minideb:buster AS runtime
 # Certificates needed to trust the CA for any HTTPS connections to the DO API.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends ca-certificates
-COPY --from=tests-1.23 /e2e.1.23.test /
-COPY --from=tests-1.22 /e2e.1.22.test /
-COPY --from=tests-1.21 /e2e.1.21.test /
+COPY --from=tests-1.29 /e2e.1.29.test /
+COPY --from=tests-1.29 /ginkgo-1.29 /usr/local/bin
+COPY --from=tests-1.28 /e2e.1.28.test /
+COPY --from=tests-1.28 /ginkgo-1.28 /usr/local/bin
+COPY --from=tests-1.27 /e2e.1.27.test /
+COPY --from=tests-1.27 /ginkgo-1.27 /usr/local/bin
+COPY --from=tests-1.26 /e2e.1.26.test /
+COPY --from=tests-1.26 /ginkgo-1.26 /usr/local/bin
 COPY --from=tools /tini /sbin/
 COPY --from=tools /doctl /usr/local/bin/
-COPY --from=tools /ginkgo /usr/local/bin/
 COPY --from=tools /kubectl /usr/local/bin/
 
 COPY cleanup-clusters.sh /

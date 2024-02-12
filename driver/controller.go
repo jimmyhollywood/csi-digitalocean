@@ -162,6 +162,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	contentSource := req.GetVolumeContentSource()
+	var snapshot *godo.Snapshot
 	if contentSource != nil && contentSource.GetSnapshot() != nil {
 		snapshotID := contentSource.GetSnapshot().GetSnapshotId()
 		if snapshotID == "" {
@@ -169,33 +170,51 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 
 		// check if the snapshot exist before we continue
-		_, resp, err := d.snapshots.Get(ctx, snapshotID)
+		var resp *godo.Response
+		snapshot, resp, err = d.snapshots.Get(ctx, snapshotID)
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, status.Errorf(codes.NotFound, "snapshot %q does not exist", snapshotID)
 			}
 			return nil, err
 		}
+		log = log.WithFields(logrus.Fields{
+			"snapshot_id":              snapshotID,
+			"snapshot_size_giga_bytes": snapshot.SizeGigaBytes,
+		})
+		log.Info("using snapshot as volume source")
 
-		log.WithField("snapshot_id", snapshotID).Info("using snapshot as volume source")
 		volumeReq.SnapshotID = snapshotID
 	}
 
-	log.Info("checking volume limit")
-	details, err := d.checkLimit(ctx)
+	log.WithField("volume_req", volumeReq).Info("creating volume")
+	vol, cvResp, err := d.storage.CreateVolume(ctx, volumeReq)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to check volume limit: %s", err)
-	}
-	if details != nil {
-		return nil, status.Errorf(codes.ResourceExhausted,
-			"volume limit (%d) has been reached. Current number of volumes: %d. Please contact support.",
-			details.limit, details.numVolumes)
+		if cvResp != nil && cvResp.StatusCode == http.StatusForbidden && strings.Contains(err.Error(), "capacity limit exceeded") {
+			return nil, status.Errorf(codes.ResourceExhausted, "volume limit has been reached. Please contact support")
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	log.WithField("volume_req", volumeReq).Info("creating volume")
-	vol, _, err := d.storage.CreateVolume(ctx, volumeReq)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+	if vol.SizeGigaBytes < volumeReq.SizeGigaBytes {
+		log.Info("resizing volume because its requested size is larger than the size of the backing snapshot")
+		action, _, err := d.storageActions.Resize(ctx, vol.ID, int(volumeReq.SizeGigaBytes), volumeReq.Region)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "cannot resize volume %s: %s", vol.ID, err.Error())
+		}
+		log = log.WithFields(logrus.Fields{
+			"resized_from": int(snapshot.SizeGigaBytes),
+			"resized_to":   int(volumeReq.SizeGigaBytes),
+		})
+		if action.Status != godo.ActionCompleted {
+			log = logWithAction(log, action)
+			log.Info("waiting until volume is resized")
+			if err := d.waitAction(ctx, log, vol.ID, action.ID); err != nil {
+				return nil, status.Errorf(codes.Internal, "failed waiting on action ID %d for volume ID %s to get resized: %s", action.ID, vol.ID, err)
+			}
+		}
+		log.Info("resize completed")
 	}
 
 	resp := &csi.CreateVolumeResponse{

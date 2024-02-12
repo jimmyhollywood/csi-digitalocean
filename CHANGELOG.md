@@ -1,5 +1,77 @@
 ## unreleased
 
+## v4.8.0 - 2024.01.10
+
+* Update CSI driver for Kubernetes 1.29
+  [[GH-567]](https://github.com/digitalocean/csi-digitalocean/pull/567)
+
+* Add missing upgrade steps
+  [[GH-533]](https://github.com/digitalocean/csi-digitalocean/pull/533)
+
+## v4.7.1 - 2023.08.23
+
+* Update CSI sidecars to latest
+  [[GH-532]](https://github.com/digitalocean/csi-digitalocean/pull/532)
+
+## v4.7.0 - 2023.08.17
+
+* Update CSI driver for Kubernetes 1.28
+  [[GH-528]](https://github.com/digitalocean/csi-digitalocean/pull/528)
+
+## v4.6.2 - 2023.08.14
+
+* Use godo action status for handling resize operation
+  [[GH-522]](https://github.com/digitalocean/csi-digitalocean/pull/522)
+
+## v4.6.1 - 2023.05.17
+
+* Update CSI sidecars to latest
+  [[GH-502]](https://github.com/digitalocean/csi-digitalocean/pull/502)
+* Fix snapshot resizing
+  [[GH-504]](https://github.com/digitalocean/csi-digitalocean/pull/504)
+
+## v4.6.0 - 2023.05.02
+
+* Update CSI driver for Kubernetes 1.27
+  [[GH-486]](https://github.com/digitalocean/csi-digitalocean/pull/486)
+* Remove pre-stop driver unregistration
+  [[GH-487]](https://github.com/digitalocean/csi-digitalocean/pull/487)
+* Fix snapshot resizing
+  [[GH-490]](https://github.com/digitalocean/csi-digitalocean/pull/490)
+
+## v4.5.1 - 2023.03.21
+
+* Validate CreateVolume limits with forbidden error response
+  [[GH-481]](https://github.com/digitalocean/csi-digitalocean/pull/481)
+* CSI driver can accidentally format existing volume
+  [[GH-478]](https://github.com/digitalocean/csi-digitalocean/pull/478)
+
+## v4.5.0 - 2023.01.11
+
+* Update CSI driver for Kubernetes 1.26
+  [[GH-469]](https://github.com/digitalocean/csi-digitalocean/pull/469)
+* Update CSI sidecars to latest
+  [[GH-474]](https://github.com/digitalocean/csi-digitalocean/pull/474)
+
+## v4.4.1 - 2022.11.04
+
+* Update CSI sidecars to latest
+  [[GH-465]](https://github.com/digitalocean/csi-digitalocean/pull/465)
+
+## v4.4.0 - 2022.11.02
+
+* Update CSI driver for Kubernetes 1.25
+  [[GH-461]](https://github.com/digitalocean/csi-digitalocean/pull/461)
+* Support setting DO API rate limit
+  [[GH-462]](https://github.com/digitalocean/csi-digitalocean/pull/462)
+* Upgrade Go to 1.19
+  [[GH-463]](https://github.com/digitalocean/csi-digitalocean/pull/463)
+
+## v4.3.0 - 2022.08.24
+
+* Update CSI driver for Kubernetes 1.24
+  [[GH-457]](https://github.com/digitalocean/csi-digitalocean/pull/457)
+
 ## v4.2.0 - 2022.07.13
 
 * Add retain and XFS storage classes
